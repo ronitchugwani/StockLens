@@ -1,11 +1,28 @@
 import yfinance as yf
+import pandas as pd
 
 
 def get_history(ticker: str, period: str = "1y") -> list:
     tk = yf.Ticker(ticker)
     df = tk.history(period=period, interval="1mo")
+    if df.empty:
+        raise ValueError(f"No historical data found for {ticker}")
+
     df = df.reset_index()
-    df["Month"] = df["Date"].dt.strftime("%b %y")
+
+    date_column = next(
+        (column for column in ("Date", "Datetime", "index") if column in df.columns),
+        None,
+    )
+    if not date_column:
+        raise ValueError(f"Unexpected history format for {ticker}")
+
+    df[date_column] = pd.to_datetime(df[date_column], errors="coerce")
+    df = df.dropna(subset=[date_column])
+    if df.empty:
+        raise ValueError(f"No valid dated history found for {ticker}")
+
+    df["Month"] = df[date_column].dt.strftime("%b %y")
     result = []
     for _, row in df.iterrows():
         result.append({
