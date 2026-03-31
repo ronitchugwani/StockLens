@@ -1,6 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from models.schemas import TickerRequest, CompareRequest
 from services import yfinance_service, alphavantage_service, nse_service
+from services.yfinance_service import get_info
 import pandas as pd
 import io
 
@@ -27,6 +28,14 @@ async def compare_stocks(req: CompareRequest):
     for ticker in req.tickers:
         results[ticker] = yfinance_service.get_history(ticker, req.period)
     return {"tickers": req.tickers, "data": results}
+
+
+@router.get("/info/{ticker}")
+async def stock_info(ticker: str):
+    try:
+        return get_info(ticker)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/upload")

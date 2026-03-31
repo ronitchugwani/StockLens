@@ -12,3 +12,6 @@ frontend/.env
 # Misc
 .DS_Store
 *.pdf
+outputs/
+backend/.pytest_cache/
+backend/pytest-cache-files-*/
