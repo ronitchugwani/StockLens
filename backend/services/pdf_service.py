@@ -1,4 +1,3 @@
-import os
 from datetime import datetime
 
 
@@ -10,7 +9,6 @@ def generate_html(ticker: str, data: list, insights: str) -> str:
     last = data[-1]
     total_return = ((last["close"] - first["open"]) / first["open"] * 100)
     max_high = max(d["high"] for d in data)
-    min_low = min(d["low"] for d in data)
     pos_months = sum(1 for i in range(1, len(data)) if data[i]["close"] > data[i - 1]["close"])
     currency = "₹" if ticker.endswith(".NS") or ticker.endswith(".BO") else "$"
     generated = datetime.now().strftime("%B %d, %Y at %H:%M")
@@ -31,10 +29,10 @@ def generate_html(ticker: str, data: list, insights: str) -> str:
         </tr>"""
 
     insight_lines = [
-        l.replace("- ", "").replace("• ", "").strip()
-        for l in insights.split("\n") if l.strip()
+        line.replace("- ", "").replace("• ", "").strip()
+        for line in insights.split("\n") if line.strip()
     ]
-    insights_html = "".join(f"<li>{l}</li>" for l in insight_lines)
+    insights_html = "".join(f"<li>{line}</li>" for line in insight_lines)
 
     return f"""
 <!DOCTYPE html>

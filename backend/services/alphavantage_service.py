@@ -1,14 +1,16 @@
-import httpx, os
+import os
+
+import httpx
 
 BASE = "https://www.alphavantage.co/query"
-KEY = os.getenv("ALPHA_VANTAGE_API_KEY", "demo")
 
 
 def get_monthly(ticker: str) -> list:
+    key = os.getenv("ALPHA_VANTAGE_API_KEY", "demo")
     params = {
         "function": "TIME_SERIES_MONTHLY_ADJUSTED",
         "symbol": ticker,
-        "apikey": KEY,
+        "apikey": key,
     }
     r = httpx.get(BASE, params=params, timeout=15)
     r.raise_for_status()
