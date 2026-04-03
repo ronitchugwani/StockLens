@@ -132,6 +132,56 @@ def test_get_history_parses_string_dates(monkeypatch):
     ]
 
 
+def test_get_history_handles_yfinance_download_multiindex(monkeypatch):
+    class FakeTicker:
+        def history(self, period: str, interval: str):
+            assert period == "1y"
+            assert interval == "1mo"
+            return pd.DataFrame()
+
+    columns = pd.MultiIndex.from_tuples(
+        [
+            ("Open", "RELIANCE.NS"),
+            ("Close", "RELIANCE.NS"),
+            ("High", "RELIANCE.NS"),
+            ("Low", "RELIANCE.NS"),
+            ("Volume", "RELIANCE.NS"),
+        ]
+    )
+    downloaded = pd.DataFrame(
+        [
+            [1200.0, 1250.0, 1260.0, 1190.0, 1_000_000],
+            [1250.0, 1300.0, 1315.0, 1240.0, 1_100_000],
+        ],
+        index=pd.Index(["2025-01-31", "2025-02-28"], name="Date"),
+        columns=columns,
+    )
+
+    monkeypatch.setattr(yfinance_service.yf, "Ticker", lambda _: FakeTicker())
+    monkeypatch.setattr(yfinance_service.yf, "download", lambda **_: downloaded)
+
+    result = yfinance_service.get_history("RELIANCE.NS", "1y")
+
+    assert result == [
+        {
+            "month": "Jan 25",
+            "open": 1200.0,
+            "close": 1250.0,
+            "high": 1260.0,
+            "low": 1190.0,
+            "vol": 1_000_000,
+        },
+        {
+            "month": "Feb 25",
+            "open": 1250.0,
+            "close": 1300.0,
+            "high": 1315.0,
+            "low": 1240.0,
+            "vol": 1_100_000,
+        },
+    ]
+
+
 def test_get_info_uses_fast_info_when_info_lookup_breaks(monkeypatch):
     class FakeTicker:
         @property

@@ -2,6 +2,28 @@ import yfinance as yf
 import pandas as pd
 
 
+def _normalize_history_frame(df: pd.DataFrame) -> pd.DataFrame:
+    if not isinstance(df.columns, pd.MultiIndex):
+        return df
+
+    normalized_columns = []
+    for column in df.columns.to_flat_index():
+        parts = [str(part) for part in column if part not in ("", None)]
+        if not parts:
+            normalized_columns.append("")
+            continue
+
+        primary = parts[0]
+        if primary in {"Date", "Datetime", "Open", "Close", "High", "Low", "Volume", "Adj Close"}:
+            normalized_columns.append(primary)
+        else:
+            normalized_columns.append(parts[-1])
+
+    normalized = df.copy()
+    normalized.columns = normalized_columns
+    return normalized
+
+
 def _download_history(ticker: str, period: str) -> pd.DataFrame:
     tk = yf.Ticker(ticker)
     try:
@@ -28,6 +50,7 @@ def get_history(ticker: str, period: str = "1y") -> list:
         raise ValueError(f"No historical data found for {ticker}")
 
     df = df.reset_index()
+    df = _normalize_history_frame(df)
 
     date_column = next(
         (column for column in ("Date", "Datetime", "index") if column in df.columns),
