@@ -6,6 +6,14 @@ from routers import stocks, insights, reports, scheduler
 
 load_dotenv()
 
+
+def _get_cors_origins() -> list[str]:
+    raw_origins = os.getenv("FRONTEND_URL", "")
+    origins = [origin.strip().rstrip("/") for origin in raw_origins.split(",") if origin.strip()]
+    if not origins:
+        origins = ["http://localhost:5173"]
+    return origins
+
 app = FastAPI(
     title="StockLens API",
     description="Automated Financial Reporting & Analytics System",
@@ -14,7 +22,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:5173")],
+    allow_origins=_get_cors_origins(),
+    # Accept any localhost or 127.0.0.1 dev server port so Vite can auto-switch
+    # without breaking browser preflight requests.
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

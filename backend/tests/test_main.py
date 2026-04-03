@@ -27,6 +27,19 @@ def test_reports_ping():
     assert res.status_code == 200
 
 
+def test_cors_preflight_allows_local_vite_ports():
+    res = client.options(
+        "/api/stocks/fetch",
+        headers={
+            "Origin": "http://localhost:5174",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+
+    assert res.status_code == 200
+    assert res.headers["access-control-allow-origin"] == "http://localhost:5174"
+
+
 def test_get_history_parses_string_dates(monkeypatch):
     class FakeTicker:
         def history(self, period: str, interval: str):
