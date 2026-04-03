@@ -12,6 +12,14 @@ export interface StockInfo {
   currency: string
 }
 
+function getErrorMessage(error: any) {
+  const responseData = error?.response?.data
+  if (typeof responseData === 'string' && responseData.trim()) return responseData
+  if (typeof responseData?.detail === 'string' && responseData.detail.trim()) return responseData.detail
+  if (typeof error?.message === 'string' && error.message.trim()) return error.message
+  return 'Failed to fetch data'
+}
+
 export function useStock() {
   const [data, setData] = useState<MonthlyBar[]>([])
   const [ticker, setTicker] = useState('')
@@ -42,7 +50,7 @@ export function useStock() {
       if (infoRes.status === 'fulfilled') setInfo(infoRes.value)
       if (insightRes.status === 'fulfilled') setAiInsights(insightRes.value.insights)
     } catch (e: any) {
-      setError(e.response?.data?.detail ?? 'Failed to fetch data')
+      setError(getErrorMessage(e))
     } finally {
       setLoading(false)
       setAiLoading(false)

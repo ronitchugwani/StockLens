@@ -2,9 +2,28 @@ import yfinance as yf
 import pandas as pd
 
 
-def get_history(ticker: str, period: str = "1y") -> list:
+def _download_history(ticker: str, period: str) -> pd.DataFrame:
     tk = yf.Ticker(ticker)
-    df = tk.history(period=period, interval="1mo")
+    try:
+        df = tk.history(period=period, interval="1mo")
+        if not df.empty:
+            return df
+    except Exception:
+        pass
+
+    df = yf.download(
+        tickers=ticker,
+        period=period,
+        interval="1mo",
+        progress=False,
+        auto_adjust=False,
+        threads=False,
+    )
+    return df
+
+
+def get_history(ticker: str, period: str = "1y") -> list:
+    df = _download_history(ticker, period)
     if df.empty:
         raise ValueError(f"No historical data found for {ticker}")
 
@@ -38,13 +57,25 @@ def get_history(ticker: str, period: str = "1y") -> list:
 
 def get_info(ticker: str) -> dict:
     tk = yf.Ticker(ticker)
-    info = tk.info
+    info = {}
+    fast_info = {}
+
+    try:
+        info = tk.info or {}
+    except Exception:
+        info = {}
+
+    try:
+        fast_info = dict(tk.fast_info or {})
+    except Exception:
+        fast_info = {}
+
     return {
-        "name": info.get("longName", ticker),
+        "name": info.get("longName") or info.get("shortName") or ticker,
         "sector": info.get("sector", "N/A"),
-        "market_cap": info.get("marketCap", 0),
-        "pe_ratio": info.get("trailingPE", 0),
-        "52w_high": info.get("fiftyTwoWeekHigh", 0),
-        "52w_low": info.get("fiftyTwoWeekLow", 0),
-        "currency": info.get("currency", "USD"),
+        "market_cap": info.get("marketCap") or fast_info.get("market_cap", 0),
+        "pe_ratio": info.get("trailingPE") or fast_info.get("trailing_pe", 0),
+        "52w_high": info.get("fiftyTwoWeekHigh") or fast_info.get("year_high", 0),
+        "52w_low": info.get("fiftyTwoWeekLow") or fast_info.get("year_low", 0),
+        "currency": info.get("currency") or fast_info.get("currency") or "USD",
     }

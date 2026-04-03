@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 import httpx
 
@@ -14,11 +15,31 @@ def get_monthly(ticker: str) -> list:
     }
     r = httpx.get(BASE, params=params, timeout=15)
     r.raise_for_status()
-    raw = r.json().get("Monthly Adjusted Time Series", {})
+    payload = r.json()
+
+    if payload.get("Error Message"):
+        raise ValueError(payload["Error Message"])
+
+    if payload.get("Information"):
+        raise ValueError(payload["Information"])
+
+    if payload.get("Note"):
+        raise ValueError(payload["Note"])
+
+    raw = payload.get("Monthly Adjusted Time Series", {})
+    if not raw:
+        if key == "demo":
+            raise ValueError(
+                f"Alpha Vantage demo key does not provide monthly data for {ticker}. "
+                "Use IBM or configure ALPHA_VANTAGE_API_KEY."
+            )
+        raise ValueError(f"Alpha Vantage returned no monthly data for {ticker}")
+
     result = []
     for date_str, vals in sorted(raw.items())[-12:]:
+        month = datetime.strptime(date_str, "%Y-%m-%d").strftime("%b %y")
         result.append({
-            "month": date_str[:7],
+            "month": month,
             "open": float(vals["1. open"]),
             "close": float(vals["5. adjusted close"]),
             "high": float(vals["2. high"]),

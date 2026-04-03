@@ -1,6 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from models.schemas import TickerRequest, CompareRequest
-from services import yfinance_service, alphavantage_service, nse_service
+from services import yfinance_service, alphavantage_service
 from services.yfinance_service import get_info
 import pandas as pd
 import io
@@ -8,16 +8,25 @@ import io
 router = APIRouter()
 
 
+def _fetch_monthly_history(ticker: str, period: str, source: str) -> tuple[list, str]:
+    if source == "alphavantage":
+        try:
+            return alphavantage_service.get_monthly(ticker), "alphavantage"
+        except Exception:
+            # Fall back to Yahoo monthly history so the dashboard remains usable.
+            return yfinance_service.get_history(ticker, period), "yahoo"
+
+    if source == "nse":
+        return yfinance_service.get_history(ticker, period), "yahoo"
+
+    return yfinance_service.get_history(ticker, period), "yahoo"
+
+
 @router.post("/fetch")
 async def fetch_stock(req: TickerRequest):
     try:
-        if req.source == "alphavantage":
-            data = alphavantage_service.get_monthly(req.ticker)
-        elif req.source == "nse":
-            data = nse_service.get_quote(req.ticker)
-        else:
-            data = yfinance_service.get_history(req.ticker, req.period)
-        return {"ticker": req.ticker, "data": data}
+        data, source_used = _fetch_monthly_history(req.ticker, req.period, req.source)
+        return {"ticker": req.ticker, "data": data, "source_used": source_used}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -34,8 +43,16 @@ async def compare_stocks(req: CompareRequest):
 async def stock_info(ticker: str):
     try:
         return get_info(ticker)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        return {
+            "name": ticker,
+            "sector": "N/A",
+            "market_cap": 0,
+            "pe_ratio": 0,
+            "52w_high": 0,
+            "52w_low": 0,
+            "currency": "USD",
+        }
 
 
 @router.post("/upload")
